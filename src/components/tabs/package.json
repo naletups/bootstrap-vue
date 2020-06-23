@@ -77,6 +77,10 @@
             "description": "CSS class (or classes) to apply to the active nav item tab control"
           },
           {
+            "prop": "navItemClass",
+            "description": "CSS class (or classes) to apply to all but the active nav item tab control"
+          },
+          {
             "prop": "value",
             "description": "Currently visible tab index (zero-based)"
           }

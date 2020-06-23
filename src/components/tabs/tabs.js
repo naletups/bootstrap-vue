@@ -113,7 +113,7 @@ const BTabButtonHelper = /*#__PURE__*/ Vue.extend({
           },
           this.tab.titleLinkClass,
           // Apply <b-tabs> `activeNavItemClass` styles when the tab is active
-          this.tab.localActive ? this.bvTabs.activeNavItemClass : null
+          this.tab.localActive ? this.bvTabs.activeNavItemClass : this.bvTabs.navItemClass
         ],
         props: { disabled: this.tab.disabled },
         attrs: {
@@ -200,6 +200,11 @@ export const BTabs = /*#__PURE__*/ Vue.extend({
       // default: null
     },
     navWrapperClass: {
+      type: [String, Array, Object]
+      // default: null
+    },
+    navItemClass: {
+      // Applied to all <b-nav-item> except active one
       type: [String, Array, Object]
       // default: null
     },
