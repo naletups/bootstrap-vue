@@ -9,6 +9,11 @@ stacked tables, etc). Our custom CSS relies on variables defined the Bootstrap v
 using the BootstrapVue source SCSS, you can have your variable overrides (such as breakpoints, theme
 colors, etc) adjust the custom BootstrapVue css generation.
 
+<!-- TODO: Uncomment when we have themes
+For premium dashboards and themes, please refer to the [`Themes section`](/themes) of the
+documentation.
+-->
+
 ## SASS variable defaults
 
 Every Sass variable in Bootstrap v4 and BootstrapVue includes the `!default` flag allowing you to
@@ -73,7 +78,7 @@ The default them colors defined in the Bootstrap v4.4 SCSS are as follows:
 Various components will use variations (intensities) of these default theme colors.
 
 You can alter the theme colors, and create additional theme colors, as needed via SASS variables and
-maps. Refer to the [Bootstrap theming](https://getbootstrap.com/docs/4.4/getting-started/theming/)
+maps. Refer to the [Bootstrap theming](https://getbootstrap.com/docs/4.5/getting-started/theming/)
 docs for more details. All theme colors automatically become available as
 [color variants](/docs/reference/color-variants) to all BootstrapVue components.
 
@@ -92,10 +97,10 @@ Some commonly used Bootstrap v4 variables are:
 | `$enable-shadows`               | Boolean | `false` | Enables predefined `box-shadow` styles on various components                                                 |
 | `$enable-gradients`             | Boolean | `false` | Enables predefined gradients via `background-image` styles on various components                             |
 | `$enable-transitions`           | Boolean | `true`  | Enables predefined `transition`s on various components                                                       |
-| `$enable-responsive-font-sizes` | Boolean | `false` | Enables [responsive font sizes](https://getbootstrap.com/docs/4.4/content/typography/#responsive-font-sizes) |
+| `$enable-responsive-font-sizes` | Boolean | `false` | Enables [responsive font sizes](https://getbootstrap.com/docs/4.5/content/typography/#responsive-font-sizes) |
 | `$enable-validation-icons`      | Boolean | `true`  | Enables `background-image` icons within textual inputs and some custom forms for validation states           |
 
-Refer to [Bootstrap's theming](https://getbootstrap.com/docs/4.4/getting-started/theming/) docs for
+Refer to [Bootstrap's theming](https://getbootstrap.com/docs/4.5/getting-started/theming/) docs for
 additional Bootstrap v4 variable information.
 
 ### BootstrapVue SASS variables
@@ -278,8 +283,13 @@ a {
 
 ## See also
 
+<!-- TODO: Uncomment when we have themes
+- For premium dashboards and themes, please refer to the [`Themes section`](/themes) of the
+documentation.
+-->
+
 - If you are defining custom breakpoint names, please see the
-  [BootstrapVue settings](/docs/misc/settings) page on how to update BootstrapVue `<b-col>` and
+  [BootstrapVue settings](/docs/reference/settings) page on how to update BootstrapVue `<b-col>` and
   `<b-form-group>` breakpoint specific props.
 - For more details on theming Bootstrap's SCSS/CSS, refer to the
-  [**Official Bootstrap v4 Theming Documentation**](https://getbootstrap.com/docs/4.4/getting-started/theming/).
+  [**Official Bootstrap v4 Theming Documentation**](https://getbootstrap.com/docs/4.5/getting-started/theming/).

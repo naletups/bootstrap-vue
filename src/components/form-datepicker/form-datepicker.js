@@ -1,14 +1,15 @@
 import Vue from '../../utils/vue'
-import identity from '../../utils/identity'
+import { arrayIncludes } from '../../utils/array'
+import { BVFormBtnLabelControl, dropdownProps } from '../../utils/bv-form-btn-label-control'
 import { getComponentConfig } from '../../utils/config'
-import { createDate, formatYMD, parseYMD } from '../../utils/date'
-import dropdownMixin from '../../mixins/dropdown'
+import { createDate, constrainDate, formatYMD, parseYMD } from '../../utils/date'
+import { attemptBlur, attemptFocus } from '../../utils/dom'
+import { isUndefinedOrNull } from '../../utils/inspect'
+import { pick } from '../../utils/object'
 import idMixin from '../../mixins/id'
-import normalizeSlotMixin from '../../mixins/normalize-slot'
 import { BButton } from '../button/button'
-import { BCalendar } from '../calendar/calendar'
+import { BCalendar, STR_LONG, STR_NARROW, STR_NUMERIC, STR_SHORT } from '../calendar/calendar'
 import { BIconCalendar, BIconCalendarFill } from '../../icons/icons'
-import { VBHover } from '../../directives/hover/hover'
 
 const NAME = 'BFormDatepicker'
 
@@ -30,25 +31,33 @@ const propsMixin = {
       default: false
     },
     resetValue: {
-      type: [String, Date],
-      default: ''
+      type: [String, Date]
+      // default: null
+    },
+    initialDate: {
+      // This specifies the calendar year/month/day that will be shown when
+      // first opening the datepicker if no v-model value is provided
+      // Default is the current date (or `min`/`max`)
+      // Passed directly to <b-calendar>
+      type: [String, Date]
+      // default: null
     },
     placeholder: {
-      type: String,
+      type: String
       // Defaults to `labelNoDateSelected` from calendar context
-      default: null
+      // default: null
     },
     size: {
-      type: String,
-      default: null
+      type: String
+      // default: null
     },
     min: {
-      type: [String, Date],
-      default: null
+      type: [String, Date]
+      // default: null
     },
     max: {
-      type: [String, Date],
-      default: null
+      type: [String, Date]
+      // default: null
     },
     disabled: {
       type: Boolean,
@@ -64,12 +73,12 @@ const propsMixin = {
       default: false
     },
     name: {
-      type: String,
-      default: null
+      type: String
+      // default: null
     },
     form: {
-      type: String,
-      default: null
+      type: String
+      // default: null
     },
     state: {
       // Tri-state prop: `true`, `false` or `null`
@@ -77,8 +86,8 @@ const propsMixin = {
       default: null
     },
     dateDisabledFn: {
-      type: Function,
-      default: null
+      type: Function
+      // default: null
     },
     noCloseOnSelect: {
       type: Boolean,
@@ -88,9 +97,14 @@ const propsMixin = {
       type: Boolean,
       default: false
     },
+    showDecadeNav: {
+      // When `true` enables the decade navigation buttons
+      type: Boolean,
+      default: false
+    },
     locale: {
-      type: [String, Array],
-      default: null
+      type: [String, Array]
+      // default: null
     },
     startWeekday: {
       // `0` (Sunday), `1` (Monday), ... `6` (Saturday)
@@ -99,8 +113,17 @@ const propsMixin = {
       default: 0
     },
     direction: {
+      type: String
+      // default: null
+    },
+    buttonOnly: {
+      type: Boolean,
+      default: false
+    },
+    buttonVariant: {
+      // Applicable in button only mode
       type: String,
-      default: null
+      default: 'secondary'
     },
     calendarWidth: {
       // Width of the calendar dropdown
@@ -114,8 +137,8 @@ const propsMixin = {
     },
     todayVariant: {
       // Variant color to use for today's date (defaults to `variant`)
-      type: String,
-      default: null
+      type: String
+      // default: null
     },
     noHighlightToday: {
       // Disable highlighting today's date
@@ -158,8 +181,17 @@ const propsMixin = {
       type: String,
       default: 'outline-secondary'
     },
+    dateInfoFn: {
+      // Passed through to b-calendar
+      type: Function
+      // default: undefined
+    },
     // Labels for buttons and keyboard shortcuts
     // These pick BCalendar global config if no BFormDate global config
+    labelPrevDecade: {
+      type: String,
+      default: () => getConfigFallback('labelPrevDecade')
+    },
     labelPrevYear: {
       type: String,
       default: () => getConfigFallback('labelPrevYear')
@@ -179,6 +211,10 @@ const propsMixin = {
     labelNextYear: {
       type: String,
       default: () => getConfigFallback('labelNextYear')
+    },
+    labelNextDecade: {
+      type: String,
+      default: () => getConfigFallback('labelNextDecade')
     },
     labelToday: {
       type: String,
@@ -204,11 +240,39 @@ const propsMixin = {
       type: String,
       default: () => getConfigFallback('labelHelp')
     },
+    dateFormatOptions: {
+      // `Intl.DateTimeFormat` object
+      // Note: This value is *not* to be placed in the global config
+      type: Object,
+      default: () => ({
+        year: STR_NUMERIC,
+        month: STR_LONG,
+        day: STR_NUMERIC,
+        weekday: STR_LONG
+      })
+    },
+    weekdayHeaderFormat: {
+      // Format of the weekday names at the top of the calendar
+      // Note: This value is *not* to be placed in the global config
+      type: String,
+      // `short` is typically a 3 letter abbreviation,
+      // `narrow` is typically a single letter
+      // `long` is the full week day name
+      // Although some locales may override this (i.e `ar`, etc)
+      default: STR_SHORT,
+      validator: value => arrayIncludes([STR_LONG, STR_SHORT, STR_NARROW], value)
+    },
     // Dark mode
     dark: {
       type: Boolean,
       default: false
-    }
+    },
+    // extra dropdown stuff
+    menuClass: {
+      type: [String, Array, Object]
+      // default: null
+    },
+    ...dropdownProps
   }
 }
 
@@ -217,11 +281,8 @@ const propsMixin = {
 // @vue/component
 export const BFormDatepicker = /*#__PURE__*/ Vue.extend({
   name: NAME,
-  directives: {
-    BHover: VBHover
-  },
   // The mixins order determines the order of appearance in the props reference section
-  mixins: [idMixin, normalizeSlotMixin, propsMixin, dropdownMixin],
+  mixins: [idMixin, propsMixin],
   model: {
     prop: 'value',
     event: 'input'
@@ -230,15 +291,13 @@ export const BFormDatepicker = /*#__PURE__*/ Vue.extend({
     return {
       // We always use `YYYY-MM-DD` value internally
       localYMD: formatYMD(this.value) || '',
+      // If the popup is open
+      isVisible: false,
       // Context data from BCalendar
       localLocale: null,
       isRTL: false,
       formattedValue: '',
-      activeYMD: '',
-      // Flag to add focus ring to outer wrapper
-      hasFocus: false,
-      // If the control is hovered
-      isHovered: false
+      activeYMD: ''
     }
   },
   computed: {
@@ -248,18 +307,15 @@ export const BFormDatepicker = /*#__PURE__*/ Vue.extend({
       return this.activeYMD.slice(0, -3)
     },
     calendarProps() {
-      // We alis `this` to `self` for better minification
+      // Use self for better minification, as `this` won't
+      // minimize and we reference it many times below
       const self = this
-      // TODO: Make the ID's computed props
-      const idLabel = self.safeId('_value_')
-      const idWrapper = self.safeId('_b-form-date_')
       return {
-        // id: this.safeId('_picker_'),
-        ariaControls: [idLabel, idWrapper].filter(identity).join(' ') || null,
+        hidden: !self.isVisible,
         value: self.localYMD,
-        hidden: !self.visible,
         min: self.min,
         max: self.max,
+        initialDate: self.initialDate,
         readonly: self.readonly,
         disabled: self.disabled,
         locale: self.locale,
@@ -269,22 +325,32 @@ export const BFormDatepicker = /*#__PURE__*/ Vue.extend({
         dateDisabledFn: self.dateDisabledFn,
         selectedVariant: self.selectedVariant,
         todayVariant: self.todayVariant,
+        dateInfoFn: self.dateInfoFn,
         hideHeader: self.hideHeader,
+        showDecadeNav: self.showDecadeNav,
+        noHighlightToday: self.noHighlightToday,
+        labelPrevDecade: self.labelPrevDecade,
         labelPrevYear: self.labelPrevYear,
         labelPrevMonth: self.labelPrevMonth,
         labelCurrentMonth: self.labelCurrentMonth,
         labelNextMonth: self.labelNextMonth,
         labelNextYear: self.labelNextYear,
+        labelNextDecade: self.labelNextDecade,
         labelToday: self.labelToday,
         labelSelected: self.labelSelected,
         labelNoDateSelected: self.labelNoDateSelected,
         labelCalendar: self.labelCalendar,
         labelNav: self.labelNav,
-        labelHelp: self.labelHelp
+        labelHelp: self.labelHelp,
+        dateFormatOptions: self.dateFormatOptions,
+        weekdayHeaderFormat: self.weekdayHeaderFormat
       }
     },
+    computedLang() {
+      return (this.localLocale || '').replace(/-u-.*$/i, '') || null
+    },
     computedResetValue() {
-      return parseYMD(this.resetValue) || ''
+      return formatYMD(constrainDate(this.resetValue)) || ''
     }
   },
   watch: {
@@ -292,40 +358,32 @@ export const BFormDatepicker = /*#__PURE__*/ Vue.extend({
       this.localYMD = formatYMD(newVal) || ''
     },
     localYMD(newVal) {
-      this.$emit('input', this.valueAsDate ? parseYMD(newVal) || null : newVal || '')
+      // We only update the v-model when the datepicker is open
+      if (this.isVisible) {
+        this.$emit('input', this.valueAsDate ? parseYMD(newVal) || null : newVal || '')
+      }
     },
     calendarYM(newVal, oldVal) /* istanbul ignore next */ {
       // Displayed calendar month has changed
       // So possibly the calendar height has changed...
       // We need to update popper computed position
       if (newVal !== oldVal && oldVal) {
-        this.updatePopper()
+        try {
+          this.$refs.control.updatePopper()
+        } catch {}
       }
     }
-  },
-  mounted() {
-    this.$on('shown', () => {
-      try {
-        this.$refs.calendar.focus()
-      } catch {}
-    })
   },
   methods: {
     // Public methods
     focus() {
       if (!this.disabled) {
-        try {
-          // This assumes the toggle is an element and not a component
-          this.$refs.toggle.focus()
-        } catch {}
+        attemptFocus(this.$refs.control)
       }
     },
     blur() {
       if (!this.disabled) {
-        try {
-          // This assumes the toggle is an element and not a component
-          this.$refs.toggle.blur()
-        } catch {}
+        attemptBlur(this.$refs.control)
       }
     },
     // Private methods
@@ -334,7 +392,7 @@ export const BFormDatepicker = /*#__PURE__*/ Vue.extend({
       // Close calendar popup, unless `noCloseOnSelect`
       if (!this.noCloseOnSelect) {
         this.$nextTick(() => {
-          this.hide(true)
+          this.$refs.control.hide(true)
         })
       }
     },
@@ -359,114 +417,51 @@ export const BFormDatepicker = /*#__PURE__*/ Vue.extend({
       this.$emit('context', ctx)
     },
     onTodayButton() {
-      this.setAndClose(formatYMD(createDate()))
+      // Set to today (or min/max if today is out of range)
+      this.setAndClose(formatYMD(constrainDate(createDate(), this.min, this.max)))
     },
     onResetButton() {
       this.setAndClose(this.computedResetValue)
     },
     onCloseButton() {
-      this.hide(true)
+      this.$refs.control.hide(true)
     },
-    setFocus(evt) {
-      this.hasFocus = evt.type === 'focus'
+    // Menu handlers
+    onShow() {
+      this.isVisible = true
     },
-    handleHover(hovered) {
-      this.isHovered = hovered
+    onShown() {
+      this.$nextTick(() => {
+        attemptFocus(this.$refs.calendar)
+        this.$emit('shown')
+      })
+    },
+    onHidden() {
+      this.isVisible = false
+      this.$emit('hidden')
+    },
+    // Render helpers
+    defaultButtonFn({ isHovered, hasFocus }) {
+      return this.$createElement(isHovered || hasFocus ? BIconCalendarFill : BIconCalendar, {
+        attrs: { 'aria-hidden': 'true' }
+      })
     }
   },
   render(h) {
-    const size = this.size
-    const state = this.state
-    const visible = this.visible
-    const isHovered = this.isHovered
-    const hasFocus = this.hasFocus
+    const $scopedSlots = this.$scopedSlots
     const localYMD = this.localYMD
     const disabled = this.disabled
     const readonly = this.readonly
-    const required = this.required
-    // TODO: move these to computed props
-    const idButton = this.safeId()
-    const idLabel = this.safeId('_value_')
-    const idMenu = this.safeId('_dialog_')
-    const idWrapper = this.safeId('_b-form-date_')
-
-    const btnScope = { isHovered, hasFocus, state, opened: visible }
-    const defaultButtonFn = scope => {
-      const data = { props: { scale: 1.25 }, attrs: { 'aria-hidden': 'true' } }
-      return h(scope.isHovered || scope.hasFocus ? BIconCalendarFill : BIconCalendar, data)
-    }
-    let $button = h('div', { attrs: { 'aria-hidden': 'true' } }, [
-      this.normalizeSlot('button-content', btnScope) || defaultButtonFn(btnScope)
-    ])
-    $button = h(
-      'button',
-      {
-        ref: 'toggle',
-        staticClass: 'btn border-0 h-auto py-0',
-        class: { [`btn-${size}`]: !!size },
-        attrs: {
-          id: idButton,
-          type: 'button',
-          disabled: disabled,
-          'aria-haspopup': 'dialog',
-          'aria-expanded': visible ? 'true' : 'false',
-          'aria-invalid': state === false ? 'true' : null,
-          'aria-required': required ? 'true' : null
-        },
-        on: {
-          mousedown: this.onMousedown,
-          click: this.toggle,
-          keydown: this.toggle, // Handle ENTER, SPACE and DOWN
-          '!focus': this.setFocus,
-          '!blur': this.setFocus
-        }
-      },
-      [$button]
-    )
-
-    // Label as a "fake" input
-    // This label will be read by screen readers when the button is focused
-    const $input = h(
-      'label',
-      {
-        staticClass: 'form-control text-break text-wrap border-0 bg-transparent h-auto pl-1 m-0',
-        class: {
-          // Mute the text if showing the placeholder
-          'text-muted': !localYMD,
-          [`form-control-${size}`]: !!size,
-          'is-invalid': state === false,
-          'is-valid': state === true
-        },
-        attrs: {
-          id: idLabel,
-          for: idButton,
-          dir: this.isRTL ? 'rtl' : 'ltr',
-          lang: this.localLocale || null,
-          'aria-invalid': state === false ? 'true' : null,
-          'aria-required': required ? 'true' : null
-        },
-        on: {
-          // Disable bubbling of the click event to
-          // prevent menu from closing and re-opening
-          click: evt => /* istanbul ignore next */ {
-            evt.stopPropagation()
-          }
-        }
-      },
-      [
-        // Add the formatted value or placeholder
-        localYMD ? this.formattedValue : this.placeholder || this.labelNoDateSelected || '\u00A0',
-        // Add an sr-only 'selected date' label if a date is selected
-        localYMD ? h('span', { staticClass: 'sr-only' }, ` (${this.labelSelected}) `) : h()
-      ]
-    )
+    const placeholder = isUndefinedOrNull(this.placeholder)
+      ? this.labelNoDateSelected
+      : this.placeholder
 
     // Optional footer buttons
-    let $controls = []
+    let $footer = []
 
     if (this.todayButton) {
       const label = this.labelTodayButton
-      $controls.push(
+      $footer.push(
         h(
           BButton,
           {
@@ -481,7 +476,7 @@ export const BFormDatepicker = /*#__PURE__*/ Vue.extend({
 
     if (this.resetButton) {
       const label = this.labelResetButton
-      $controls.push(
+      $footer.push(
         h(
           BButton,
           {
@@ -496,11 +491,11 @@ export const BFormDatepicker = /*#__PURE__*/ Vue.extend({
 
     if (this.closeButton) {
       const label = this.labelCloseButton
-      $controls.push(
+      $footer.push(
         h(
           BButton,
           {
-            props: { size: 'sm', disabled: disabled, variant: this.closeButtonVariant },
+            props: { size: 'sm', disabled, variant: this.closeButtonVariant },
             attrs: { 'aria-label': label || null },
             on: { click: this.onCloseButton }
           },
@@ -509,18 +504,18 @@ export const BFormDatepicker = /*#__PURE__*/ Vue.extend({
       )
     }
 
-    if ($controls.length > 0) {
-      $controls = [
+    if ($footer.length > 0) {
+      $footer = [
         h(
           'div',
           {
             staticClass: 'b-form-date-controls d-flex flex-wrap',
             class: {
-              'justify-content-between': $controls.length > 1,
-              'justify-content-end': $controls.length < 2
+              'justify-content-between': $footer.length > 1,
+              'justify-content-end': $footer.length < 2
             }
           },
-          $controls
+          $footer
         )
       ]
     }
@@ -530,83 +525,53 @@ export const BFormDatepicker = /*#__PURE__*/ Vue.extend({
       {
         key: 'calendar',
         ref: 'calendar',
-        staticClass: 'b-form-date-calendar',
+        staticClass: 'b-form-date-calendar w-100',
         props: this.calendarProps,
         on: {
           selected: this.onSelected,
           input: this.onInput,
           context: this.onContext
-        }
+        },
+        scopedSlots: pick($scopedSlots, [
+          'nav-prev-decade',
+          'nav-prev-year',
+          'nav-prev-month',
+          'nav-this-month',
+          'nav-next-month',
+          'nav-next-year',
+          'nav-next-decade'
+        ])
       },
-      $controls
+      $footer
     )
 
-    const $menu = h(
-      'div',
+    return h(
+      BVFormBtnLabelControl,
       {
-        ref: 'menu',
-        staticClass: 'dropdown-menu p-2',
-        class: {
-          show: visible,
-          'dropdown-menu-right': this.right,
-          'bg-dark': this.dark,
-          'text-light': this.dark
-        },
-        attrs: {
-          id: idMenu,
-          role: 'dialog',
-          tabindex: '-1',
-          'aria-modal': 'false',
-          'aria-labelledby': idLabel
+        ref: 'control',
+        staticClass: 'b-form-datepicker',
+        props: {
+          // This adds unneeded props, but reduces code size:
+          ...this.$props,
+          // Overridden / computed props
+          id: this.safeId(),
+          rtl: this.isRTL,
+          lang: this.computedLang,
+          value: localYMD || '',
+          formattedValue: localYMD ? this.formattedValue : '',
+          placeholder: placeholder || '',
+          menuClass: [{ 'bg-dark': !!this.dark, 'text-light': !!this.dark }, this.menuClass]
         },
         on: {
-          keydown: this.onKeydown // Handle ESC
+          show: this.onShow,
+          shown: this.onShown,
+          hidden: this.onHidden
+        },
+        scopedSlots: {
+          'button-content': $scopedSlots['button-content'] || this.defaultButtonFn
         }
       },
       [$calendar]
-    )
-
-    let $hidden = h()
-    if (this.name && !disabled) {
-      $hidden = h('input', {
-        attrs: {
-          type: 'hidden',
-          name: this.name,
-          form: this.form,
-          value: localYMD || ''
-        }
-      })
-    }
-
-    return h(
-      'div',
-      {
-        staticClass: 'b-form-datepicker form-control dropdown h-auto p-0 d-flex',
-        class: [
-          this.directionClass,
-          {
-            show: visible,
-            focus: hasFocus,
-            [`form-control-${size}`]: !!size,
-            'is-invalid': state === false,
-            'is-valid': state === true
-          }
-        ],
-        attrs: {
-          id: idWrapper,
-          role: 'group',
-          'aria-disabled': disabled,
-          'aria-readonly': readonly && !disabled,
-          'aria-labelledby': idLabel,
-          'aria-invalid': state === false ? 'true' : null,
-          'aria-required': required ? 'true' : null,
-          // We don't want the flex order to change here
-          // So we always use 'ltr'
-          dir: 'ltr'
-        },
-        directives: [{ name: 'b-hover', value: this.handleHover }]
-      },
-      [$button, $hidden, $menu, $input]
     )
   }
 })

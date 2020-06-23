@@ -7,61 +7,61 @@
       <!-- PLATINUM SPONSORS -->
       <template v-if="platinumSponsors.length > 0">
         <h4 class="h5 mx-auto mt-3 text-muted">Platinum Sponsors</h4>
-        <BVDContributorsContainer
+        <BVContributorsContainer
           type="platinum-sponsors"
           :contributors="platinumSponsors"
           :nofollow="false"
-        ></BVDContributorsContainer>
+        ></BVContributorsContainer>
       </template>
 
       <!-- GOLD SPONSORS -->
       <template v-if="goldSponsors.length > 0">
         <h4 class="h5 mx-auto mt-3 text-muted">Gold Sponsors</h4>
-        <BVDContributorsContainer
+        <BVContributorsContainer
           type="gold-sponsors"
           :contributors="goldSponsors"
           :nofollow="false"
-        ></BVDContributorsContainer>
+        ></BVContributorsContainer>
       </template>
 
       <!-- SILVER SPONSORS -->
       <template v-if="silverSponsors.length > 0">
         <h4 class="h5 mx-auto mt-3 text-muted">Silver Sponsors</h4>
-        <BVDContributorsContainer
+        <BVContributorsContainer
           type="silver-sponsors"
           :contributors="silverSponsors"
           :nofollow="false"
-        ></BVDContributorsContainer>
+        ></BVContributorsContainer>
       </template>
 
       <!-- BRONZE SPONSORS -->
       <template v-if="bronzeSponsors.length > 0">
         <h4 class="h5 mx-auto mt-3 text-muted">Bronze Sponsors</h4>
-        <BVDContributorsContainer
+        <BVContributorsContainer
           type="bronze-sponsors"
           :contributors="bronzeSponsors"
           :nofollow="false"
-        ></BVDContributorsContainer>
+        ></BVContributorsContainer>
       </template>
     </template>
 
     <!-- BACKERS -->
     <template v-if="backers.length > 0">
       <h3 class="h4 mx-auto mt-4 text-muted">Backers</h3>
-      <BVDContributorsContainer
+      <BVContributorsContainer
         type="backers"
         :contributors="backers"
-      ></BVDContributorsContainer>
+      ></BVContributorsContainer>
     </template>
 
     <!-- DONORS -->
     <template v-if="donors.length > 0">
       <h3 class="h4 mx-auto mt-4 text-muted">Donors</h3>
-      <BVDContributorsContainer
+      <BVContributorsContainer
         type="donors"
         :contributors="donors"
         :show-name="false"
-      ></BVDContributorsContainer>
+      ></BVContributorsContainer>
     </template>
   </div>
 </template>
@@ -85,14 +85,14 @@
   }
 
   .backers & {
-    width: 80px;
-
-    .contributor-thumbnail {
-      height: 80px;
-    }
+    width: 70px;
 
     .contributor-name {
-      font-size: 70%;
+      font-size: 60%;
+    }
+
+    .contributor-thumbnail {
+      height: 70px;
     }
   }
 
@@ -107,46 +107,46 @@
   .silver-sponsors & {
     width: 100px;
 
-    .contributor-thumbnail {
-      height: 100px;
-    }
-
     .contributor-name {
       font-size: 90%;
       font-weight: bold;
+    }
+
+    .contributor-thumbnail {
+      height: 100px;
     }
   }
 
   .gold-sponsors & {
     width: 120px;
 
-    .contributor-thumbnail {
-      height: 120px;
-    }
-
     .contributor-name {
       font-size: 90%;
       font-weight: bold;
+    }
+
+    .contributor-thumbnail {
+      height: 120px;
     }
   }
 
   .platinum-sponsors & {
     width: 140px;
 
-    .contributor-thumbnail {
-      height: 140px;
-    }
-
     .contributor-name {
       font-size: 100%;
       font-weight: bold;
+    }
+
+    .contributor-thumbnail {
+      height: 140px;
     }
   }
 }
 </style>
 
 <script>
-import BVDContributorsContainer from '~/components/contributors-container'
+import BVContributorsContainer from '~/components/contributors-container'
 
 const OC_BASE_URL = 'https://rest.opencollective.com/v2/bootstrap-vue/orders/'
 const OC_DEFAULT_PARAMS = { status: 'active', tierSlug: null, limit: 200 }
@@ -156,14 +156,16 @@ const MAX_DONORS = 64
 
 // This value needs to be less than or equal to our bronze tier amount
 // We may want to set two thresholds: a single donation amount and
-// a total dontation amount. This determine if we link to the donors
+// a total dontation amount. This determines if we link to the donors
 // website or not. Used to help prevent abuse of opencollective via
-// small dontations to gain cheep backlinks for Google page rank
-const LINK_AMT_THRESHOLD = 20
+// small dontations to gain cheep backlinks for Google page rank.
+// A threshold of 24 means that it will take 12 months for a $2/month
+// backer to get a back link rendered in our docs
+const LINK_AMT_THRESHOLD = 24
 
 export default {
-  name: 'BVDContributors',
-  components: { BVDContributorsContainer },
+  name: 'BVContributors',
+  components: { BVContributorsContainer },
   data() {
     return {
       platinumSponsors: [],
@@ -234,7 +236,7 @@ export default {
           imageUrl: entry.fromAccount.imageUrl,
           // We only link their website when the total amount is at or above a certain
           // threshold to prevent some questionable websites from abusing opencollective
-          // as a means to improve thier Google page ranking via backlinks
+          // as a means to improve their Google page ranking via backlinks
           website:
             Math.max(amount || 0, totalAmount || 0) < LINK_AMT_THRESHOLD
               ? null

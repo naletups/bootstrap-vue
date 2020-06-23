@@ -47,7 +47,7 @@ tags to load the required JavaScript and CSS in your page.
       <b-container>
         <b-jumbotron header="BootstrapVue" lead="Bootstrap v4 Components for Vue.js 2">
           <p>For more information visit our website</p>
-          <b-btn variant="primary" href="https://bootstrap-vue.js.org/">More Info</b-btn>
+          <b-btn variant="primary" href="https://bootstrap-vue.org/">More Info</b-btn>
         </b-jumbotron>
 
         <b-form-group
@@ -95,7 +95,7 @@ references will be handy starting points:
 
 - BootstrapVue's [Theming](/docs/reference/theming) reference section
 - Official Bootstrap
-  [Theming Bootstrap ](https://getbootstrap.com/docs/4.3/getting-started/theming/) guide
+  [Theming Bootstrap ](https://getbootstrap.com/docs/4.5/getting-started/theming/) guide
 
 ## Individual component import
 

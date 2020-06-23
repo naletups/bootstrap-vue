@@ -1,7 +1,7 @@
 /*
  * docs-mixin: used by any page under /docs path
  */
-import { makeTOC, scrollTo, offsetTop } from '~/utils'
+import { updateMetaTOC, scrollTo, offsetTop } from '~/utils'
 import { bvDescription, nav } from '~/content'
 
 const TOC_CACHE = {}
@@ -13,12 +13,7 @@ export default {
       scrollTimeout: null
     }
   },
-
   computed: {
-    content() {
-      // NOTE: is this computed prop used anymore?
-      return (this.$route.params.slug && this._content[this.$route.params.slug]) || {}
-    },
     headTitle() {
       const routeName = this.$route.name
       let title = ''
@@ -32,8 +27,6 @@ export default {
         section = 'Directives'
       } else if (/^docs-reference/.test(routeName)) {
         section = 'Reference'
-      } else if (/^docs-misc/.test(routeName)) {
-        section = 'Miscellaneous'
       }
       return [title, section, 'BootstrapVue'].filter(Boolean).join(' | ')
     },
@@ -70,33 +63,33 @@ export default {
       return meta
     }
   },
-
-  mounted() {
-    clearTimeout(this.scrollTimeout)
-    this.scrollTimeout = null
-    this.focusScroll()
+  created() {
+    // In a `$nextTick()` to ensure `toc.vue` is created first
     this.$nextTick(() => {
-      // In a `setTimeout()` to allow page time to finish processing
-      setTimeout(() => {
-        const key = `${this.$route.path}_${this.$route.params.slug || ''}`
-        const toc =
-          TOC_CACHE[key] || (TOC_CACHE[key] = makeTOC(this.readme || '', this.meta || null))
-        this.$root.$emit('docs-set-toc', toc)
-      }, 1)
+      const key = `${this.$route.name}_${this.$route.params.slug || ''}`
+      const toc =
+        TOC_CACHE[key] || (TOC_CACHE[key] = updateMetaTOC(this.baseTOC || {}, this.meta || null))
+      this.$root.$emit('docs-set-toc', toc)
     })
   },
-
-  updated() {
-    clearTimeout(this.scrollTimeout)
-    this.scrollTimeout = null
+  mounted() {
+    this.clearScrollTimeout()
     this.focusScroll()
   },
-
-  beforeDestroy() {
-    this.$root.$emit('docs-set-toc', {})
+  updated() {
+    this.clearScrollTimeout()
+    this.focusScroll()
   },
-
+  beforeDestroy() {
+    this.clearScrollTimeout()
+  },
   methods: {
+    clearScrollTimeout() {
+      if (this.scrollTimeout) {
+        clearTimeout(this.scrollTimeout)
+        this.scrollTimeout = null
+      }
+    },
     focusScroll() {
       const hash = this.$route.hash
       this.$nextTick(() => {
@@ -122,14 +115,13 @@ export default {
         const scroller = document.scrollingElement || document.documentElement || document.body
         // Allow time for v-play to finish rendering
         this.scrollTimeout = setTimeout(() => {
-          // scroll heading into view (minus offset to account for nav top height
+          this.clearScrollTimeout()
+          // Scroll heading into view (minus offset to account for nav top height)
           scrollTo(scroller, offsetTop(el) - 70, 100)
-          this.scrollTimeout = null
         }, 100)
       }
     }
   },
-
   head() {
     return {
       title: this.headTitle,

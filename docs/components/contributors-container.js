@@ -3,8 +3,9 @@ import { mergeData } from 'vue-functional-data-merge'
 const CLASS_NAME = 'contributors-container'
 const CONTRIBUTOR_CLASS_NAME = 'contributor'
 
+// @vue/component
 export default {
-  name: 'BVDContributorsContainer',
+  name: 'BVContributorsContainer',
   functional: true,
   props: {
     type: {
@@ -37,8 +38,8 @@ export default {
       const $image = h('b-img-lazy', {
         props: {
           src: imageUrl,
-          fluid: true,
           block: true,
+          fluidGrow: true,
           alt: 'Contributor image'
         }
       })
@@ -65,7 +66,7 @@ export default {
           'div',
           {
             staticClass: `${CONTRIBUTOR_CLASS_NAME}-name`,
-            class: ['mb-0', 'pt-2', 'text-break']
+            class: ['mb-0', 'pt-1', 'text-break']
           },
           name
         )
@@ -77,7 +78,7 @@ export default {
         $content = h(
           'b-link',
           {
-            class: ['text-reset'],
+            class: ['text-reset d-block'],
             props: {
               href: website,
               target: '_blank',
